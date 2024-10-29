@@ -1,39 +1,36 @@
-# Projet OpenData - Application Streamlit
+# Projet OpenData - Application de Visualisation de Données
 
 ## Description
-Application web développée avec Streamlit pour visualiser et analyser des données ouvertes.
+Application web développée avec Streamlit pour visualiser et analyser des données provenant de l'API OpenFoodFacts.
 
-## Structure du Projet
+## Architecture du Projet
 
 ```
 Projet_OpenData/
 │
-├── main.py                 # Point d'entrée de l'application
-│
-├── pages/                  # Différents onglets de l'application
+├── api/                    # Scripts de récupération de données
 │   ├── __init__.py
-│   ├── page1.py           # Premier onglet
-│   ├── page2.py           # Deuxième onglet
-│   └── page3.py           # Troisième onglet
+│   ├── fetch_data.py      # Script principal de récupération
+│   └── utilities.py       # Fonctions utilitaires pour l'API
 │
-├── data/                   # Stockage des données
-│   └── raw/               # Données brutes non modifiées
+├── app/                    # Application Streamlit
+│   ├── __init__.py
+│   ├── main.py            # Point d'entrée de l'application
+│   └── pages/             # Pages de l'application
+│       ├── __init__.py
+│       ├── page1.py
+│       ├── page2.py
+│       └── page3.py
 │
-├── src/                    # Code source principal
+├── data/                   # Données
+│
+├── src/                   # Code source partagé
 │   ├── __init__.py
 │   ├── data_processing.py # Traitement des données
-│   └── visualization.py   # Création des visualisations
+│   └── visualization.py   # Fonctions de visualisation
 │
-├── utils/                  # Fonctions utilitaires
-│   ├── __init__.py
-│   └── helpers.py         # Fonctions d'aide diverses
-│
-├── config/                 # Configuration
-│   └── config.py          # Variables de configuration
-│
-├── requirements.txt        # Dépendances Python
-│
-└── README.md              # Ce fichier
+├── requirements.txt       # Dépendances
+└── README.md             # Documentation
 ```
 
 ## Installation
@@ -49,43 +46,67 @@ cd Projet_OpenData
 pip install -r requirements.txt
 ```
 
-## Lancement de l'application
+## Utilisation
 
+Le projet se compose de deux parties distinctes :
+
+### 1. Récupération des données (API)
+Pour mettre à jour les données depuis l'API OpenFoodFacts :
 ```bash
-streamlit run main.py
+python api/fetch_data.py
+```
+Cette commande va :
+- Récupérer les catégories disponibles
+- Télécharger les données pour chaque catégorie
+- Sauvegarder les données dans le dossier `data/`
+
+### 2. Application Web (Streamlit)
+Pour lancer l'application web :
+```bash
+streamlit run app/main.py
 ```
 
-## Guide de contribution
+## Structure des Pages
 
-1. Créer une nouvelle branche pour votre fonctionnalité :
+- **Page 1** : [Description de la page 1]
+- **Page 2** : [Description de la page 2]
+- **Page 3** : [Description de la page 3]
+
+## Développement
+
+Pour contribuer au projet :
+
+1. Créer une nouvelle branche :
 ```bash
 git checkout -b nom-de-votre-fonctionnalite
 ```
 
-2. Effectuer vos modifications
-3. Commiter vos changements :
+2. Faire vos modifications
+3. Pousser vos changements :
 ```bash
 git add .
-git commit -m "Description de vos modifications"
+git commit -m "Description des modifications"
 git push origin nom-de-votre-fonctionnalite
 ```
 
-4. Ouvrir une Pull Request sur GitHub
+4. Créer une Pull Request sur GitHub
 
-## Organisation des pages
+## Guide de Contribution
 
-- **Page 1** : [Description de la première page]
-- **Page 2** : [Description de la deuxième page]
-- **Page 3** : [Description de la troisième page]
+- La partie API (`api/`) gère uniquement la récupération et le stockage des données
+- La partie App (`app/`) gère uniquement l'affichage et l'interaction utilisateur
+- Le code partagé va dans `src/`
+- Les données sont stockées dans `data/`
 
-## Dépendances principales
+## Dépendances Principales
 
 - Streamlit
 - Pandas
-- [Autres dépendances principales]
+- Requests
+- [Autres dépendances]
 
 ## Auteurs
 
-- [Votre nom]
-- [Nom du collaborateur 2]
-- [Nom du collaborateur 3]
+- [Nom Auteur 1]
+- [Nom Auteur 2]
+- [Nom Auteur 3]
