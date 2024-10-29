@@ -1,11 +1,14 @@
 import streamlit as st
+from pages import page1
 
-# Titre de votre application
-st.title('Mon Application Streamlit')
+st.set_page_config(page_title="Application Recettes", layout="wide")
 
-# Ajout de contenu simple
-st.write('Hello World!')
+# Menu dans la sidebar
+page = st.sidebar.selectbox(
+    "Navigation",
+    ["Recherche de Produits"]
+)
 
-# Exemple avec un widget
-if st.button('Cliquez-moi'):
-    st.write('Bouton cliqué!')
+# Affichage de la page
+if page == "Recherche de Produits":
+    page1.show()
