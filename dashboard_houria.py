@@ -2,6 +2,8 @@ import streamlit as st
 import requests
 import plotly.express as px
 import pandas as pd
+import time
+import re
 
 # Fonction pour obtenir un produit par recherche par nom
 def search_product(query):
@@ -15,15 +17,49 @@ def search_product(query):
         return []
 
 # Fonction pour obtenir des produits par catégorie
+@st.cache_data
 def search_product_by_category(category):
-    url = f"https://world.openfoodfacts.org/cgi/search.pl?categories={category}&action=process&json=1"
-    response = requests.get(url)
-    if response.status_code == 200:
-        data = response.json()
-        return data.get('products', [])
-    else:
-        st.error(f"Erreur lors de la recherche de produits dans la catégorie {category} : {response.status_code}")
-        return []
+    url = f"https://world.openfoodfacts.org/category/{category}.json"
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
+    
+    products = []
+    page = 1  # Commence à la première page
+    required_keys = [
+        "product_name", "code", "quantity", "origins", "categories", 
+        "countries_tags", "nutriments", "nutriscore_grade", 
+        "nova_group", "nutrition_data_per", "allergens", "traces", "labels"
+    ]
+    
+    # On récupère jusqu'à 10 produits
+    while len(products) < 10:  
+        response = requests.get(f"{url}?page={page}", headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json()
+            new_products = data.get('products', [])
+            if not new_products:  # Si aucun nouveau produit n'est trouvé, sortir de la boucle
+                break
+            
+            for product in new_products:
+                # Vérifier si le produit contient toutes les clés requises et est valide
+                if all(product.get(key) not in [None, ''] for key in required_keys):
+                    products.append(product)
+                    if len(products) >= 10:  # Si 10 produits sont collectés, on arrête
+                        break
+            
+            page += 1
+        
+        elif response.status_code == 429:
+            st.warning("Limite de requêtes atteinte. Attente avant de réessayer...")
+            time.sleep(10)
+        else:
+            st.error(f"Erreur lors de la récupération des produits : {response.status_code}")
+            break
+
+    return products[:10]
+
 
 # Fonction pour nettoyer les préfixes et formater chaque mot avec la première lettre en majuscule
 def clean_prefixes(items):
@@ -38,30 +74,76 @@ def clean_prefixes(items):
         formatted_items.append(formatted_item)
     return formatted_items
 
-# Fonction pour afficher la carte des pays de vente
-def display_sales_map(countries):
+# Fonction pour afficher la carte des pays de vente avec préfixes nettoyés
+def display_sales_map(countries, zoom_country=None):
     if countries:
-        # Nettoyer les préfixes
+        # Nettoyer les pays (enlever les préfixes et capitaliser correctement)
         countries_cleaned = clean_prefixes(countries)
         
         # Créer un DataFrame avec les pays nettoyés
         df_countries = pd.DataFrame(countries_cleaned, columns=['Country'])
         
-        # Utiliser Plotly pour afficher une carte choroplète
+        # Utiliser Plotly pour afficher une carte choroplète des pays sélectionnés
         fig = px.choropleth(df_countries,
                             locations='Country', 
                             locationmode='country names',
                             color='Country',
                             hover_name='Country',
-                            title="Pays de vente des produits",
-                            template="plotly_white")
+                            title="Pays de vente des produits sélectionnés",
+                            template="plotly_white",  # Fond blanc
+                            color_continuous_scale='Viridis')  # Option pour une palette moderne et colorée
         
-        fig.update_geos(showcoastlines=True, coastlinecolor="Black", showland=True, landcolor="lightgray")
-        fig.update_layout(title="Carte des pays de vente des produits", title_x=0.5, title_font_size=18)
+        # Afficher la carte dans Streamlit avec une largeur maximale
+        st.plotly_chart(fig, use_container_width=True)
+
+# Récupérer et afficher les pays de vente avec préfixes nettoyés dans un tableau et sur la carte
+def display_sales_info_and_map(selected_products):
+    countries_list = []  # Liste pour stocker les pays de vente
+    
+    # Récupérer les pays de vente
+    countries = []
+    for product in selected_products:
+        product_name = product.get('product_name', 'Inconnu')
+        product_countries = product.get('countries_tags', [])
         
-        st.plotly_chart(fig)
-    else:
-        st.write("Aucune information sur les pays de vente.")
+        if product_countries:
+            countries_cleaned = clean_prefixes(product_countries)
+            countries_list.append({'Product': product_name, 'Countries of Sale': ', '.join(countries_cleaned)})
+            countries.extend(countries_cleaned)  # Ajouter tous les pays dans la liste des pays
+        
+        else:
+            countries_list.append({'Product': product_name, 'Countries of Sale': 'Aucune information disponible'})
+    
+    # Créer un DataFrame pour le tableau des pays
+    df_countries = pd.DataFrame(countries_list)
+    st.subheader("Tableau des pays de vente des produits")
+    st.dataframe(df_countries)
+    
+    # Afficher la carte des pays de vente
+    display_sales_map(countries)
+
+# Fonction pour afficher la carte des pays de vente
+def display_sales_countries_table(selected_products):
+    countries_list = []  # Liste pour stocker les pays de vente
+    
+    # Parcours de chaque produit dans le panier
+    for product in selected_products:
+        product_name = product.get('product_name', 'Inconnu')
+        countries = product.get('countries_tags', [])
+        
+        if countries:
+            countries_cleaned = clean_prefixes(countries)
+            countries_list.append({'Product': product_name, 'Countries of Sale': ', '.join(countries_cleaned)})
+        else:
+            countries_list.append({'Product': product_name, 'Countries of Sale': 'Aucune information disponible'})
+    
+    # Créer un DataFrame à partir de la liste
+    df_countries = pd.DataFrame(countries_list)
+
+    # Afficher le tableau dans Streamlit
+    st.subheader("Tableau des pays de vente des produits")
+    st.dataframe(df_countries)
+
         
 # Fonction pour générer un graphique de comparaison des nutriments avec les AJR
 def plot_nutrient_journalier_plotly(selected_products, objectifs):
@@ -282,8 +364,9 @@ else:
             st.session_state.objectifs["calories"] = calories
 
         with col2:
-            plot_nutrient_distribution_plotly(st.session_state.selected_products)
             plot_nutrient_journalier_plotly(st.session_state.selected_products, st.session_state.objectifs)
+            plot_nutrient_distribution_plotly(st.session_state.selected_products)
+            display_sales_info_and_map(st.session_state.selected_products)
  
 
 st.markdown("""
