@@ -1,31 +1,16 @@
+# pages/4 - 🍲 Recipes.py
+
 import streamlit as st
 import requests
 
-# Fonction pour obtenir la liste des recettes avec un ingrédient donné
-def get_recipes_by_ingredient(ingredient):
-    url = f"https://www.themealdb.com/api/json/v1/1/filter.php?i={ingredient}"
-    response = requests.get(url)
-    if response.status_code == 200:
-        data = response.json()
-        if data["meals"]:
-            return data["meals"]
-        else:
-            return "Aucune recette trouvée pour cet ingrédient."
-    else:
-        return f"Erreur : {response.status_code}"
+from functions import initialize_session_state, show_cart_sidebar, get_recipes_by_ingredient, get_recipe_details
 
-# Fonction pour obtenir les détails d'une recette en utilisant l'ID de la recette
-def get_recipe_details(recipe_id):
-    url = f"https://www.themealdb.com/api/json/v1/1/lookup.php?i={recipe_id}"
-    response = requests.get(url)
-    if response.status_code == 200:
-        data = response.json()
-        return data["meals"][0] if data["meals"] else None
-    else:
-        return None
 
 # Interface utilisateur avec Streamlit
 st.set_page_config(page_title="Générateur de Recettes", page_icon="🍲", layout="wide")
+
+initialize_session_state()
+show_cart_sidebar()
 
 # Styles de la page avec CSS intégré pour les couleurs pastel
 st.markdown(
