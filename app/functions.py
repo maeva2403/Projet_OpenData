@@ -113,53 +113,74 @@ def clean_prefixes(items):
         formatted_items.append(formatted_item)
     return formatted_items
 
-# Fonction pour afficher la carte des pays de vente avec préfixes nettoyés
-def display_sales_map(countries, zoom_country=None):
-    if countries:
-        # Nettoyer les pays (enlever les préfixes et capitaliser correctement)
-        countries_cleaned = clean_prefixes(countries)
-        
-        # Créer un DataFrame avec les pays nettoyés
-        df_countries = pd.DataFrame(countries_cleaned, columns=['Country'])
-        
-        # Utiliser Plotly pour afficher une carte choroplète des pays sélectionnés
-        fig = px.choropleth(df_countries,
-                            locations='Country', 
-                            locationmode='country names',
-                            color='Country',
-                            hover_name='Country',
-                            title="Pays de vente des produits sélectionnés",
-                            template="plotly_white",  # Fond blanc
-                            color_continuous_scale='Viridis')  # Option pour une palette moderne et colorée
-        
-        # Afficher la carte dans Streamlit avec une largeur maximale
-        st.plotly_chart(fig, use_container_width=True)
-
-# Récupérer et afficher les pays de vente avec préfixes nettoyés dans un tableau et sur la carte
-def display_sales_info_and_map(selected_products):
-    countries_list = []  # Liste pour stocker les pays de vente
+def display_sales_map(countries_data):
+    if not countries_data:
+        return
     
-    # Récupérer les pays de vente
-    countries = []
+    # Créer un dictionnaire pays -> produits
+    country_products = {}
+    for product in countries_data:
+        product_name = product.get('product_name', 'Inconnu')
+        countries = product.get('countries_tags', [])
+        
+        cleaned_countries = clean_prefixes(countries)
+        for country in cleaned_countries:
+            if country not in country_products:
+                country_products[country] = []
+            country_products[country].append(product_name)
+    
+    # Créer le DataFrame pour Plotly
+    df_countries = pd.DataFrame([
+        {'Country': country, 'Products': '<br>'.join(products)}
+        for country, products in country_products.items()
+    ])
+    
+    # Créer la carte avec les infobulles personnalisées
+    fig = px.choropleth(
+        df_countries,
+        locations='Country',
+        locationmode='country names',
+        color='Country',
+        hover_data=['Products'],
+        custom_data=['Products'],
+        title="Pays de vente des produits sélectionnés",
+        template="plotly_white",
+        color_continuous_scale='Viridis'
+    )
+    
+    # Personnaliser le format des infobulles
+    fig.update_traces(
+        hovertemplate="<b>%{location}</b><br><br>" +
+        "Produits vendus:<br>%{customdata[0]}<extra></extra>"
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+
+def display_sales_info_and_map(selected_products):
+    # Afficher le tableau des pays
+    countries_list = []
     for product in selected_products:
         product_name = product.get('product_name', 'Inconnu')
-        product_countries = product.get('countries_tags', [])
+        countries = product.get('countries_tags', [])
         
-        if product_countries:
-            countries_cleaned = clean_prefixes(product_countries)
-            countries_list.append({'Product': product_name, 'Countries of Sale': ', '.join(countries_cleaned)})
-            countries.extend(countries_cleaned)  # Ajouter tous les pays dans la liste des pays
-        
+        if countries:
+            countries_cleaned = clean_prefixes(countries)
+            countries_list.append({
+                'Product': product_name, 
+                'Countries of Sale': ', '.join(countries_cleaned)
+            })
         else:
-            countries_list.append({'Product': product_name, 'Countries of Sale': 'Aucune information disponible'})
-    
-    # Créer un DataFrame pour le tableau des pays
+            countries_list.append({
+                'Product': product_name, 
+                'Countries of Sale': 'Aucune information disponible'
+            })
+
     df_countries = pd.DataFrame(countries_list)
     st.subheader("Tableau des pays de vente des produits")
     st.dataframe(df_countries)
     
-    # Afficher la carte des pays de vente
-    display_sales_map(countries)
+    # Afficher la carte avec les produits au survol
+    display_sales_map(selected_products)
 
 # Fonction pour afficher la carte des pays de vente
 def display_sales_countries_table(selected_products):
