@@ -10,25 +10,30 @@ from functions import (
     create_radar_comparison
 )
 
+# Initialize session state
 initialize_session_state()
+
+# Display the cart sidebar
 show_cart_sidebar()
 
-st.title("🆚 Comparez vos Produits")
+# Set the title for the page
+st.title("🆚 Compare Your Products")
 
+# Check if at least 2 products are selected for comparison
 if len(st.session_state.selected_products) < 2:
-    st.warning("Sélectionnez au moins 2 produits pour les comparer.")
+    st.warning("Select at least 2 products to compare.")
 else:
-    # Création de deux colonnes pour la comparaison
+    # Create two columns for the comparison
     col1, col2 = st.columns(2)
     
-    # Informations de base
+    # Basic Information
     with st.container():
         for idx, product in enumerate(st.session_state.selected_products):
             with col1 if idx % 2 == 0 else col2:
                 st.subheader(product.get('product_name', 'Unknown'))
                 st.image(product.get('image_url', 'placeholder.png'), width=200)
                 
-                # Scores
+                # Display scores
                 scores_col1, scores_col2, scores_col3 = st.columns(3)
                 with scores_col1:
                     st.metric("Nutriscore", product.get('nutriscore_grade', '?').upper())
@@ -37,11 +42,11 @@ else:
                 with scores_col3:
                     st.metric("NOVA", product.get('nova_group', '?'))
     
-    # Graphiques de comparaison
+    # Display comparison charts
     st.plotly_chart(create_nutrient_comparison(st.session_state.selected_products))
     st.plotly_chart(create_radar_comparison(st.session_state.selected_products))
     
-    # Tableau comparatif détaillé
+    # Detailed comparison table
     comparison_data = []
     for product in st.session_state.selected_products:
         nutriments = product.get('nutriments', {})
@@ -65,5 +70,6 @@ else:
             'NOVA': product.get('nova_group', '?')
         })
     
-    st.subheader("Tableau comparatif détaillé")
+    # Display detailed comparison table
+    st.subheader("Detailed Comparison Table")
     st.dataframe(pd.DataFrame(comparison_data))

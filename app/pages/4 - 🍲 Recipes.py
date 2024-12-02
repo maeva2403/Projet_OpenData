@@ -6,13 +6,13 @@ import requests
 from functions import initialize_session_state, show_cart_sidebar, get_recipes_by_ingredient, get_recipe_details
 
 
-# Interface utilisateur avec Streamlit
-st.set_page_config(page_title="Générateur de Recettes", page_icon="🍲", layout="wide")
+# User interface setup with Streamlit
+st.set_page_config(page_title="Recipe Generator", page_icon="🍲", layout="wide")
 
 initialize_session_state()
 show_cart_sidebar()
 
-# Styles de la page avec CSS intégré pour les couleurs pastel
+# Page styling with embedded CSS for pastel colors
 st.markdown(
     """
     <style>
@@ -74,41 +74,41 @@ st.markdown(
     """, unsafe_allow_html=True
 )
 
-# Titre principal de la page
-st.markdown("<h1 class='title'>🍲 Générateur de Recettes avec MealDB 🍲</h1>", unsafe_allow_html=True)
+# Main title of the page
+st.markdown("<h1 class='title'>🍲 Recipe Generator with MealDB 🍲</h1>", unsafe_allow_html=True)
 
-# Sous-titre de description
-st.markdown("<p class='subtitle'>Entrez un ingrédient, et obtenez des recettes simples utilisant cet ingrédient</p>", unsafe_allow_html=True)
+# Subtitle description
+st.markdown("<p class='subtitle'>Enter an ingredient, and get simple recipes using that ingredient</p>", unsafe_allow_html=True)
 
-# Champ d'entrée pour l'ingrédient avec étiquette stylisée
-st.markdown("<label class='input-label'>Entrez un ingrédient</label>", unsafe_allow_html=True)
+# Input field for the ingredient with styled label
+st.markdown("<label class='input-label'>Enter an ingredient</label>", unsafe_allow_html=True)
 ingredient = st.text_input("")
 
-# Si un ingrédient est saisi, recherche et affiche les recettes
+# If an ingredient is entered, search and display the recipes
 if ingredient:
     recipes = get_recipes_by_ingredient(ingredient)
     
     if isinstance(recipes, list):
         for recipe in recipes:
-            # Récupère les détails complets de la recette
+            # Fetch the complete details of the recipe
             recipe_details = get_recipe_details(recipe["idMeal"])
 
             if recipe_details:
-                # Affichage de la carte de recette avec deux colonnes
+                # Display the recipe card with two columns
                 with st.container():
                     st.markdown(f"<div class='recipe-card'>", unsafe_allow_html=True)
                     st.subheader(f"{recipe['strMeal']}")
                     
-                    # Deux colonnes : une pour l'image, l'autre pour les ingrédients
+                    # Two columns: one for the image, another for the ingredients
                     col1, col2 = st.columns([1, 2])
                     
-                    # Colonne pour l'image
+                    # Column for the image
                     with col1:
                         st.image(recipe["strMealThumb"], width=300)
                     
-                    # Colonne pour les ingrédients
+                    # Column for the ingredients
                     with col2:
-                        st.markdown(f"### 🍽️ Ingrédients nécessaires :")
+                        st.markdown(f"### 🍽️ Ingredients required:")
                         ingredients = []
                         for i in range(1, 21):
                             ingredient_name = recipe_details.get(f"strIngredient{i}")
@@ -116,7 +116,7 @@ if ingredient:
                             if ingredient_name and ingredient_name.strip():
                                 ingredients.append(f"{ingredient_measure} {ingredient_name}")
 
-                        # Divise les ingrédients en deux colonnes
+                        # Split the ingredients into two columns
                         half = len(ingredients) // 2
                         col_ingr1, col_ingr2 = st.columns(2)
                         with col_ingr1:
@@ -126,10 +126,10 @@ if ingredient:
                             for ingr in ingredients[half:]:
                                 st.markdown(f"- <span class='ingredient'>{ingr}</span>", unsafe_allow_html=True)
 
-                        # Bouton vers la recette complète
-                        st.markdown(f"<a href='https://www.themealdb.com/meal/{recipe['idMeal']}' target='_blank' class='recipe-button'>Voir la recette complète</a>", unsafe_allow_html=True)
+                        # Button linking to the full recipe
+                        st.markdown(f"<a href='https://www.themealdb.com/meal/{recipe['idMeal']}' target='_blank' class='recipe-button'>View Full Recipe</a>", unsafe_allow_html=True)
                     st.markdown("</div>", unsafe_allow_html=True)
     else:
-        st.write(recipes)
+        st.write(recipes)  # If no recipes are found, display the response
 else:
-    st.write("Veuillez entrer un ingrédient pour rechercher des recettes.")
+    st.write("Please enter an ingredient to search for recipes.")  # If no ingredient is entered, prompt the user to enter one

@@ -9,218 +9,259 @@ import plotly.graph_objects as go
 import re
 
 def initialize_session_state():
+    # Check if "objectifs" (goals) is already initialized in session state
+    # If not, initialize it with default values for fats, sugars, salt, and calories
     if "objectifs" not in st.session_state:
         st.session_state.objectifs = {"graisses": 70, "sucres": 50, "sel": 6, "calories": 2000}
 
+    # Check if "selected_products" is already initialized in session state
+    # If not, initialize it as an empty list (this will hold selected products)
     if "selected_products" not in st.session_state:
         st.session_state.selected_products = []
 
+    # Check if "show_search" is already initialized in session state
+    # If not, initialize it as False (controls whether the search interface is shown)
     if "show_search" not in st.session_state:
         st.session_state.show_search = False
 
+    # Check if "search_results" is already initialized in session state
+    # If not, initialize it as an empty list (this will hold search results)
     if "search_results" not in st.session_state:
         st.session_state.search_results = []
 
 def show_cart_sidebar():
    with st.sidebar:
+       # Display the sidebar subheader for the cart
        st.subheader("Panier", anchor="cart-subheader")
 
+       # Check if there are products in the selected_products list
        if st.session_state.selected_products:
+           # Loop through each selected product and display its name
            for index, product in enumerate(st.session_state.selected_products):
                product_name = product.get('product_name', 'Unknown')
                st.write(f"- {product_name}")
 
+               # Add a button to remove the product from the cart
+               # When clicked, remove the product and show a success message
                if st.button(f"Remove {product_name}", key=f"remove_{index}", use_container_width=True):
                    st.session_state.selected_products.pop(index)
                    st.success(f"{product_name} removed from cart")
-                   st.rerun()
+                   st.rerun()  # Re-run the app to update the cart display
        else:
+           # If the cart is empty, display a message
            st.write("Your cart is empty.")
            
+       # Button to add a product to the cart
+       # When clicked, show the product search interface and switch pages
        if st.button("Add product", key="add_product", use_container_width=True):
            st.session_state.show_search = True
            st.switch_page("pages/1 - 🛒 Products.py")
 
-# Fonction pour obtenir un produit par recherche par nom
+# Function to search for a product by name
 def search_product(query):
+    # Construct the URL for the OpenFoodFacts API with the search query
     url = f"https://world.openfoodfacts.org/cgi/search.pl?search_terms={query}&search_simple=1&action=process&json=1"
+    
+    # Send a GET request to the API
     response = requests.get(url)
+    
+    # Check if the request was successful (HTTP status 200)
     if response.status_code == 200:
+        # Parse the JSON response to extract the list of products
         data = response.json()
         return data.get('products', [])
     else:
-        st.error(f"Erreur lors de la recherche de produit : {response.status_code}")
+        # Display an error message if the request failed
+        st.error(f"Error occurred while searching for product: {response.status_code}")
         return []
 
-# Fonction pour obtenir des produits par catégorie
+# Function to search for products by category
 @st.cache_data
 def search_product_by_category(category, nb_items=20):
-   url = f"https://world.openfoodfacts.org/category/{category}.json"
-   headers = {
-       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-   }
-   
-   products = []
-   page = 1
-   page_size = 100
+    # URL to fetch products from the specified category
+    url = f"https://world.openfoodfacts.org/category/{category}.json"
+    
+    # Custom headers for the request
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
 
-   while len(products) < nb_items:  
-       try:
-           response = requests.get(f"{url}?page={page}&page_size={page_size}", headers=headers, timeout=10)
-           
-           if response.status_code == 200:
-               data = response.json()
-               new_products = data.get('products', [])
-               if not new_products:
-                   break
-                   
-               for product in new_products:
-                   if (product.get('product_name') and 
-                       product.get('nutriments') and 
-                       product.get('nutriscore_grade') not in [None, '', 'unknown', 'UNKNOWN'] and
-                       product.get('ecoscore_grade') not in [None, '', 'unknown', 'UNKNOWN'] and
-                       product.get('countries_tags') and 
-                       product.get('nova_group')):
-                       
-                       nutriments = product.get('nutriments', {})
-                       if all(nutriments.get(key) not in [None, '', 0, 'unknown', 'UNKNOWN'] 
-                             for key in ["energy-kcal", "fat", "saturated-fat", "carbohydrates", 
-                                       "sugars", "proteins", "salt"]):
-                           products.append(product)
-                           if len(products) >= nb_items:
-                               break
-                   
-               page += 1
-           else:
-               break
+    # List to store the found products
+    products = []
+    
+    # Pagination parameters
+    page = 1
+    page_size = 100
 
-       except:
-           break
+    # Continue fetching until we reach the desired number of items
+    while len(products) < nb_items:  
+        try:
+            # Request the product data for the current page
+            response = requests.get(f"{url}?page={page}&page_size={page_size}", headers=headers, timeout=10)
+            
+            # If the response is successful (status 200)
+            if response.status_code == 200:
+                # Parse the JSON response
+                data = response.json()
+                new_products = data.get('products', [])
+                
+                # If no new products were found, stop the loop
+                if not new_products:
+                    break
+                
+                # Filter the products based on the required conditions
+                for product in new_products:
+                    if (product.get('product_name') and 
+                        product.get('nutriments') and 
+                        product.get('nutriscore_grade') not in [None, '', 'unknown', 'UNKNOWN'] and
+                        product.get('ecoscore_grade') not in [None, '', 'unknown', 'UNKNOWN'] and
+                        product.get('countries_tags') and 
+                        product.get('nova_group')):
+                        
+                        nutriments = product.get('nutriments', {})
+                        
+                        # Check if the required nutriments are present
+                        if all(nutriments.get(key) not in [None, '', 0, 'unknown', 'UNKNOWN'] 
+                               for key in ["energy-kcal", "fat", "saturated-fat", "carbohydrates", 
+                                           "sugars", "proteins", "salt"]):
+                            products.append(product)
+                            if len(products) >= nb_items:
+                                break
+                
+                # Move to the next page
+                page += 1
+            else:
+                break  # Stop if we get an unsuccessful response
 
-   return products[:nb_items]
+        except:
+            break  # Exit in case of any exception (e.g., timeout)
+
+    # Return the required number of products
+    return products[:nb_items]
 
 
-# Fonction pour nettoyer les préfixes et formater chaque mot avec la première lettre en majuscule
 def clean_prefixes(items):
     formatted_items = []
     for item in items:
-        # Retirer tout préfixe avant ':'
+        # Remove prefix before the first colon
         item_cleaned = re.sub(r'^.*?:', '', item)
-        # Capitaliser chaque sous-partie
+        
+        # Capitalize each part of the string, split by spaces or hyphens
         formatted_item = ' '.join([part.capitalize() for part in re.split(r'[- ]', item_cleaned)])
-        # Remettre les tirets pour avoir le bon format de pays
+        
+        # Replace spaces with hyphens to maintain formatting (e.g., country code style)
         formatted_item = formatted_item.replace(" ", "-")
+        
         formatted_items.append(formatted_item)
+    
     return formatted_items
 
-# Fonction pour afficher la carte des pays de vente avec préfixes nettoyés
-def display_sales_map(countries, zoom_country=None):
+# Function to display the map of sales countries with cleaned prefixes
+def display_sales_map(countries):
     if countries:
-        # Nettoyer les pays (enlever les préfixes et capitaliser correctement)
+        # Clean the countries (remove prefixes and capitalize correctly)
         countries_cleaned = clean_prefixes(countries)
         
-        # Créer un DataFrame avec les pays nettoyés
+        # Create a DataFrame with the cleaned countries
         df_countries = pd.DataFrame(countries_cleaned, columns=['Country'])
         
-        # Utiliser Plotly pour afficher une carte choroplète des pays sélectionnés
+        # Use Plotly to display a choropleth map of the selected countries
         fig = px.choropleth(df_countries,
                             locations='Country', 
                             locationmode='country names',
                             color='Country',
                             hover_name='Country',
-                            title="Pays de vente des produits sélectionnés",
-                            template="plotly_white",  # Fond blanc
-                            color_continuous_scale='Viridis')  # Option pour une palette moderne et colorée
+                            title="Countries of Sale for Selected Products",
+                            template="plotly_white",  # White background
+                            color_continuous_scale='Viridis')  # Modern, colorful color palette
         
-        # Afficher la carte dans Streamlit avec une largeur maximale
+        # Display the map in Streamlit with a maximum width
         st.plotly_chart(fig, use_container_width=True)
 
-# Récupérer et afficher les pays de vente avec préfixes nettoyés dans un tableau et sur la carte
+# Example usage with a list of products
 def display_sales_info_and_map(selected_products):
-    countries_list = []  # Liste pour stocker les pays de vente
+    countries_list = []  # List to store sales countries
     
-    # Récupérer les pays de vente
+    # Retrieve the sales countries
     countries = []
     for product in selected_products:
-        product_name = product.get('product_name', 'Inconnu')
+        product_name = product.get('product_name', 'Unknown')
         product_countries = product.get('countries_tags', [])
         
         if product_countries:
             countries_cleaned = clean_prefixes(product_countries)
             countries_list.append({'Product': product_name, 'Countries of Sale': ', '.join(countries_cleaned)})
-            countries.extend(countries_cleaned)  # Ajouter tous les pays dans la liste des pays
-        
+            countries.extend(countries_cleaned)  # Add all countries to the sales countries list
         else:
-            countries_list.append({'Product': product_name, 'Countries of Sale': 'Aucune information disponible'})
+            countries_list.append({'Product': product_name, 'Countries of Sale': 'No information available'})
     
-    # Créer un DataFrame pour le tableau des pays
+    # Create a DataFrame for the sales countries table
     df_countries = pd.DataFrame(countries_list)
-    st.subheader("Tableau des pays de vente des produits")
+    st.subheader("Countries of Sale for Selected Products")
     st.dataframe(df_countries)
     
-    # Afficher la carte des pays de vente
+    # Display the sales map
     display_sales_map(countries)
 
-# Fonction pour afficher la carte des pays de vente
+# Function to display the sales countries table
 def display_sales_countries_table(selected_products):
-    countries_list = []  # Liste pour stocker les pays de vente
+    countries_list = []  # List to store sales countries
     
-    # Parcours de chaque produit dans le panier
+    # Iterate over each product in the cart
     for product in selected_products:
-        product_name = product.get('product_name', 'Inconnu')
+        product_name = product.get('product_name', 'Unknown')
         countries = product.get('countries_tags', [])
         
         if countries:
             countries_cleaned = clean_prefixes(countries)
             countries_list.append({'Product': product_name, 'Countries of Sale': ', '.join(countries_cleaned)})
         else:
-            countries_list.append({'Product': product_name, 'Countries of Sale': 'Aucune information disponible'})
+            countries_list.append({'Product': product_name, 'Countries of Sale': 'No information available'})
     
-    # Créer un DataFrame à partir de la liste
+    # Create a DataFrame from the list
     df_countries = pd.DataFrame(countries_list)
 
-    # Afficher le tableau dans Streamlit
-    st.subheader("Tableau des pays de vente des produits")
+    # Display the table in Streamlit
+    st.subheader("Sales Countries Table for Products")
     st.dataframe(df_countries)
-
         
-# Fonction pour générer un graphique de comparaison des nutriments avec les AJR
-def plot_nutrient_journalier_plotly(selected_products, objectifs):
-   ajr = {
-       "Calories (kcal)": objectifs.get("calories", 2000),
-       "Graisses (g)": objectifs.get("graisses", 70),
-       "Graisses saturées (g)": objectifs.get("graisses_sat", 20),
-       "Glucides (g)": objectifs.get("glucides", 260), 
-       "Sucres (g)": objectifs.get("sucres", 50),
-       "Protéines (g)": objectifs.get("proteines", 50),
-       "Sel (g)": objectifs.get("sel", 6)
+# Function to generate a nutrient comparison chart with Recommended Daily Allowances (RDA)
+def plot_nutrient_rda_comparison_plotly(selected_products, goals):
+   rda = {
+       "Calories (kcal)": goals.get("calories", 2000),
+       "Fat (g)": goals.get("fat", 70),
+       "Saturated Fat (g)": goals.get("saturated_fat", 20),
+       "Carbohydrates (g)": goals.get("carbohydrates", 260), 
+       "Sugars (g)": goals.get("sugars", 50),
+       "Proteins (g)": goals.get("proteins", 50),
+       "Salt (g)": goals.get("salt", 6)
    }
 
-   # Calcul des totaux
+   # Calculate totals
    totals = {
        "Calories": sum(p.get('nutriments', {}).get('energy-kcal', 0) for p in selected_products),
-       "Graisses": sum(p.get('nutriments', {}).get('fat', 0) for p in selected_products),
-       "Graisses saturées": sum(p.get('nutriments', {}).get('saturated-fat', 0) for p in selected_products),
-       "Glucides": sum(p.get('nutriments', {}).get('carbohydrates', 0) for p in selected_products),
-       "Sucres": sum(p.get('nutriments', {}).get('sugars', 0) for p in selected_products),
-       "Protéines": sum(p.get('nutriments', {}).get('proteins', 0) for p in selected_products),
-       "Sel": sum(p.get('nutriments', {}).get('salt', 0) for p in selected_products)
+       "Fat": sum(p.get('nutriments', {}).get('fat', 0) for p in selected_products),
+       "Saturated Fat": sum(p.get('nutriments', {}).get('saturated-fat', 0) for p in selected_products),
+       "Carbohydrates": sum(p.get('nutriments', {}).get('carbohydrates', 0) for p in selected_products),
+       "Sugars": sum(p.get('nutriments', {}).get('sugars', 0) for p in selected_products),
+       "Proteins": sum(p.get('nutriments', {}).get('proteins', 0) for p in selected_products),
+       "Salt": sum(p.get('nutriments', {}).get('salt', 0) for p in selected_products)
    }
 
    comparison_data = {
-       "Nutriment": list(ajr.keys()),
-       "Consommation Totale": list(totals.values()),
-       "AJR": list(ajr.values())
+       "Nutrient": list(rda.keys()),
+       "Total Consumption": list(totals.values()),
+       "RDA": list(rda.values())
    }
 
    df_comparison = pd.DataFrame(comparison_data)
-   df_comparison_long = pd.melt(df_comparison, id_vars=["Nutriment"], 
-                               value_vars=["Consommation Totale", "AJR"],
-                               var_name="Type", value_name="Valeur")
+   df_comparison_long = pd.melt(df_comparison, id_vars=["Nutrient"], 
+                               value_vars=["Total Consumption", "RDA"],
+                               var_name="Type", value_name="Value")
 
-   fig = px.bar(df_comparison_long, x="Nutriment", y="Valeur", color="Type", barmode="group",
-                labels={"Valeur": "Quantité (en kcal OU en g)", "Nutriment": "Nutriment", "Type": "Type de valeur"},
-                title="Comparaison des nutriments avec les AJR")
+   fig = px.bar(df_comparison_long, x="Nutrient", y="Value", color="Type", barmode="group",
+                labels={"Value": "Quantity (in kcal or g)", "Nutrient": "Nutrient", "Type": "Value Type"},
+                title="Comparison of Nutrients with Recommended Daily Allowances")
 
    fig.update_layout(
        title_font_size=18,
@@ -229,14 +270,15 @@ def plot_nutrient_journalier_plotly(selected_products, objectifs):
        xaxis_title_font_size=14,
        yaxis_title_font_size=14,
        xaxis_tickangle=-45,
-       xaxis_title="Nutriments",
-       yaxis_title="Quantité (en kcal OU en g)",
+       xaxis_title="Nutrients",
+       yaxis_title="Quantity (in kcal or g)",
        template="plotly_white",
        barmode="group"
    )
 
    st.plotly_chart(fig)
 
+# Function to generate a nutrient distribution chart for selected products
 def plot_nutrient_distribution_plotly(selected_products):
    nutrient_data = {
        "Energy (kcal)": 0,
@@ -265,7 +307,7 @@ def plot_nutrient_distribution_plotly(selected_products):
                 x=df.index, 
                 y="Total",
                 color=df.index,
-                title="Nutriments totaux des produits sélectionnés",
+                title="Total Nutrients of Selected Products",
                 color_discrete_sequence=["#4CAF50", "#FFC107", "#F44336", "#2196F3", "#9C27B0", "#FF9800", "#03A9F4"])
 
    fig.update_layout(
@@ -275,8 +317,8 @@ def plot_nutrient_distribution_plotly(selected_products):
        xaxis_title_font_size=14,
        yaxis_title_font_size=14,
        xaxis_tickangle=-45,
-       xaxis_title="Nutriments",
-       yaxis_title="Quantité (en kcal OU en g)",
+       xaxis_title="Nutrients",
+       yaxis_title="Quantity (in kcal or g)",
        template="plotly_white",
        xaxis=dict(showgrid=True, zeroline=False),
        yaxis=dict(showgrid=True, zeroline=False),
@@ -285,123 +327,157 @@ def plot_nutrient_distribution_plotly(selected_products):
 
    st.plotly_chart(fig)
 
+# Function to create a comparison chart of nutrients for each product
 def create_nutrient_comparison(products):
+    # List of nutrients we want to compare
     nutrients = [
         'energy-kcal', 'fat', 'saturated-fat', 'carbohydrates', 
         'sugars', 'fiber', 'proteins', 'salt'
     ]
-    data = []
     
+    data = []  # Initialize an empty list to store the product data
+    
+    # Loop through each product to extract its nutrient data
     for product in products:
-        nutriments = product.get('nutriments', {})
+        nutriments = product.get('nutriments', {})  # Get the nutrient data for the product
         product_data = {
-            'Product': product.get('product_name', 'Unknown'),
-            **{nutrient: nutriments.get(nutrient, 0) for nutrient in nutrients}
+            'Product': product.get('product_name', 'Unknown'),  # Get the product name (default to 'Unknown' if missing)
+            **{nutrient: nutriments.get(nutrient, 0) for nutrient in nutrients}  # Add each nutrient's value, defaulting to 0 if not available
         }
-        data.append(product_data)
+        data.append(product_data)  # Append the product's data to the list
     
+    # Convert the data into a DataFrame for easier manipulation
     df = pd.DataFrame(data)
     
-    fig = go.Figure()
+    fig = go.Figure()  # Initialize a plotly figure
+    
+    # Loop through each unique product to plot the bar charts
     for product in df['Product'].unique():
-        product_data = df[df['Product'] == product]
+        product_data = df[df['Product'] == product]  # Filter the DataFrame for the current product
         fig.add_trace(go.Bar(
-            name=product,
-            x=nutrients,
-            y=product_data[nutrients].values.flatten(),
-            text=product_data[nutrients].values.flatten(),
-            textposition='auto',
+            name=product,  # Name of the trace is the product name
+            x=nutrients,  # X-axis is the list of nutrients
+            y=product_data[nutrients].values.flatten(),  # Y-axis is the nutrient values for the current product
+            text=product_data[nutrients].values.flatten(),  # Display the nutrient values as text on the bars
+            textposition='auto',  # Automatically position the text on the bars
         ))
 
+    # Update the layout for the chart
     fig.update_layout(
-        title="Nutrients comparison per product",
-        barmode='group',
-        yaxis_title="Quantity",
-        xaxis_title="Nutrients",
-        xaxis_tickangle=-45
+        title="Nutrients comparison per product",  # Title of the chart
+        barmode='group',  # Bars will be grouped by product
+        yaxis_title="Quantity",  # Y-axis label
+        xaxis_title="Nutrients",  # X-axis label
+        xaxis_tickangle=-45  # Angle the x-axis labels for better readability
     )
     
+    # Return the figure to be displayed
     return fig
 
+# Function to convert letter-based score to numerical score
 def convert_letter_score_to_number(letter):
-   score_mapping = {
-       'A': 5, 'A-PLUS': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1,
-       'a': 5, 'a-plus': 5, 'b': 4, 'c': 3, 'd': 2, 'e': 1
-   }
-   return score_mapping.get(str(letter).upper(), 0)
+    # Mapping of letter grades to numerical scores
+    score_mapping = {
+        'A': 5, 'A-PLUS': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1,
+        'a': 5, 'a-plus': 5, 'b': 4, 'c': 3, 'd': 2, 'e': 1
+    }
+    # Convert the input letter to uppercase and return the corresponding score; default to 0 if not found
+    return score_mapping.get(str(letter).upper(), 0)
 
+# Function to create a radar chart comparing the Nutriscore, Ecoscore, and NOVA scores of selected products
 def create_radar_comparison(products):
-   data = []
-   
-   for product in products:
-       nutriscore = convert_letter_score_to_number(product.get('nutriscore_grade', 'e'))
-       ecoscore = convert_letter_score_to_number(product.get('ecoscore_grade', 'e'))
-       nova = product.get('nova_group', 4)
-       nova_converted = 5 - ((nova - 1) * (4/3)) if nova else 0
-       
-       data.append({
-           'Product': product.get('product_name', 'Unknown'),
-           'Nutriscore': nutriscore,
-           'Ecoscore': ecoscore,
-           'NOVA': nova_converted
-       })
-   
-   fig = go.Figure()
-   for product in data:
-       fig.add_trace(go.Scatterpolar(
-           r=[product['Nutriscore'], product['Ecoscore'], product['NOVA']],
-           theta=['Nutriscore', 'Ecoscore', 'NOVA'],
-           fill='toself',
-           name=product['Product']
-       ))
-       
-   fig.update_layout(
-       polar=dict(radialaxis=dict(visible=True, range=[0, 5])),
-       title="Comparaison des scores (5 = meilleur score)"
-   )
-   
-   return fig
+    data = []  # List to store the processed data for each product
+    
+    # Loop through each product and extract its scores
+    for product in products:
+        # Convert Nutriscore and Ecoscore letter grades to numerical values
+        nutriscore = convert_letter_score_to_number(product.get('nutriscore_grade', 'e'))
+        ecoscore = convert_letter_score_to_number(product.get('ecoscore_grade', 'e'))
+        
+        # Get the NOVA group (default to 4 if not available)
+        nova = product.get('nova_group', 4)
+        # Convert the NOVA group to a numerical value, where 1 is the best and 4 is the worst
+        nova_converted = 5 - ((nova - 1) * (4/3)) if nova else 0
+        
+        # Append the processed data for this product to the data list
+        data.append({
+            'Product': product.get('product_name', 'Unknown'),
+            'Nutriscore': nutriscore,
+            'Ecoscore': ecoscore,
+            'NOVA': nova_converted
+        })
+    
+    # Create a Plotly figure for the radar chart
+    fig = go.Figure()
+    
+    # Loop through the data and add a trace for each product
+    for product in data:
+        fig.add_trace(go.Scatterpolar(
+            r=[product['Nutriscore'], product['Ecoscore'], product['NOVA']],  # Radar chart values
+            theta=['Nutriscore', 'Ecoscore', 'NOVA'],  # Labels for each axis
+            fill='toself',  # Fill the area inside the radar chart
+            name=product['Product']  # Label for the trace (product name)
+        ))
+    
+    # Update the layout of the radar chart
+    fig.update_layout(
+        polar=dict(radialaxis=dict(visible=True, range=[0, 5])),  # Set the range of the radial axis (0 to 5)
+        title="Comparison of Scores (5 = best score)"  # Title of the chart
+    )
+    
+    # Return the figure to be displayed
+    return fig
 
+# Function to get recipes by a specific ingredient
 @st.cache_data
 def get_recipes_by_ingredient(ingredient):
+    # API URL to filter meals by ingredient
     url = f"https://www.themealdb.com/api/json/v1/1/filter.php?i={ingredient}"
-    response = requests.get(url)
-    if response.status_code == 200:
-        data = response.json()
-        return data["meals"] if data["meals"] else "Aucune recette trouvée pour cet ingrédient."
-    return f"Erreur : {response.status_code}"
+    response = requests.get(url)  # Sending GET request to the API
+    if response.status_code == 200:  # Check if the request is successful
+        data = response.json()  # Parse the JSON response
+        # Return the list of meals or a message if no meals are found
+        return data["meals"] if data["meals"] else "No recipe found for this ingredient."
+    # Return an error message if the API request fails
+    return f"Error: {response.status_code}"
 
+# Function to get detailed information about a specific recipe
 @st.cache_data
 def get_recipe_details(recipe_id):
+    # API URL to get detailed information about a recipe using its ID
     url = f"https://www.themealdb.com/api/json/v1/1/lookup.php?i={recipe_id}"
-    response = requests.get(url)
-    if response.status_code == 200:
-        data = response.json()
+    response = requests.get(url)  # Sending GET request to the API
+    if response.status_code == 200:  # Check if the request is successful
+        data = response.json()  # Parse the JSON response
+        # Return the details of the recipe or None if no details are found
         return data["meals"][0] if data["meals"] else None
+    # Return None if the API request fails
     return None
 
 
-# Utiliser @st.cache_data pour mettre en cache le traitement des produits
+# Use @st.cache_data to cache the processing of products
 @st.cache_data
 def process_products(products):
-    processed_data = []
+    processed_data = []  # List to store processed product data
     
+    # Iterate through each product in the input list
     for product in products:
+        # Extract basic product information (name, code, URL, etc.)
         product_data = {
-            "product_name": product.get("product_name", "Inconnu"),
-            "code": product.get("code", "Inconnu"),
+            "product_name": product.get("product_name", "Unknown"),
+            "code": product.get("code", "Unknown"),
             "url": product.get("url", "#"),
-            "quantity": product.get("quantity", "Information non disponible"),
-            "categories": product.get("categories", "Information non disponible"),
-            "origins": product.get("origins", "Information non disponible"),
-            "nutriscore_grade": product.get("nutriscore_grade", "Non disponible").upper(),
-            "ecoscore_grade": product.get("ecoscore_grade", "Non disponible").upper(),
-            "nova_group": product.get("nova_group", "Non disponible"),
-            "nutrition_data_per": product.get("nutrition_data_per", "Non disponible"),
+            "quantity": product.get("quantity", "Information not available"),
+            "categories": product.get("categories", "Information not available"),
+            "origins": product.get("origins", "Information not available"),
+            "nutriscore_grade": product.get("nutriscore_grade", "Not available").upper(),
+            "ecoscore_grade": product.get("ecoscore_grade", "Not available").upper(),
+            "nova_group": product.get("nova_group", "Not available"),
+            "nutrition_data_per": product.get("nutrition_data_per", "Not available"),
             "image_url": product.get("image_front_small_url", None)
         }
         
-        # Liste des nutriments spécifiques
+        # List of specific nutrients to extract
         selected_nutrients = [
             'energy-kcal_100g',
             'fat_100g',
@@ -410,34 +486,93 @@ def process_products(products):
             'sugars_100g',
             'fiber_100g',
             'proteins_100g',
-            'salt_100g'            
+            'salt_100g'
         ]
-
-        # Extraction des nutriments
+        
+        # Extracting nutrient values from the product's 'nutriments' field
         nutriments = product.get("nutriments", {})
         for nutrient_key in selected_nutrients:
             nutrient_value = nutriments.get(nutrient_key)
-            # Transforme le nom du nutriment pour le rendre plus lisible dans le DataFrame
+            # Transform the nutrient name for better readability in the DataFrame
             nutrient_name = nutrient_key.replace('_100g', '').replace('_unit', '').replace('-', ' ').capitalize()
             product_data[nutrient_name] = nutrient_value
         
-        # Nettoyage des allergènes et des labels
+        # Clean and process allergens and labels
         allergens = product.get("allergens", "")
-        product_data["allergens"] = ", ".join(clean_prefixes(allergens.split(","))) if allergens else "Non disponible"
+        product_data["allergens"] = ", ".join(clean_prefixes(allergens.split(","))) if allergens else "Not available"
         
         labels = product.get("labels", "")
-        product_data["labels"] = ", ".join(clean_prefixes(labels.split(","))) if labels else "Non disponible"
+        product_data["labels"] = ", ".join(clean_prefixes(labels.split(","))) if labels else "Not available"
 
+        # Clean and process categories and origins
         categories = product.get("categories", "")
-        product_data["categories"] = ", ".join(clean_prefixes(categories.split(","))) if categories else "Non disponible"
-
+        product_data["categories"] = ", ".join(clean_prefixes(categories.split(","))) if categories else "Not available"
+        
         origins = product.get("origins", "")
-        product_data["origins"] = ", ".join(clean_prefixes(origins.split(","))) if origins else "Non disponible"
+        product_data["origins"] = ", ".join(clean_prefixes(origins.split(","))) if origins else "Not available"
         
-        # Nettoyage des pays de vente
+        # Clean and process countries of sale
         countries = product.get("countries_tags", [])
-        product_data["countries"] = ", ".join(clean_prefixes(countries)) if countries else "Non disponible"
+        product_data["countries"] = ", ".join(clean_prefixes(countries)) if countries else "Not available"
         
+        # Add the processed product data to the list
         processed_data.append(product_data)
     
+    # Convert the list of product data into a DataFrame and return it
     return pd.DataFrame(processed_data)
+
+
+def plot_label_distribution(selected_products):
+    # Specific labels to search for
+    specific_labels = ["No gluten", "Vegetarian", "Vegan"]
+    label_counts = {label: 0 for label in specific_labels}
+    label_products = {label: [] for label in specific_labels}  # Dictionary to store products associated with each label
+
+    # Iterate over selected products
+    for product in selected_products:
+        labels = product.get('labels', '')
+        if labels:
+            labels_list = labels.split(',')
+            for label in specific_labels:
+                if label in labels_list:
+                    label_counts[label] += 1
+                    label_products[label].append(product.get('product_name', 'Unknown'))
+
+    # Add an "Others" category if necessary
+    total_products = len(selected_products)
+    others_count = total_products - sum(label_counts.values())
+    if others_count > 0:
+        label_counts["Others"] = others_count
+        label_products["Others"] = [product.get('product_name', 'Unknown') for product in selected_products if not any(label in product.get('labels', '').split(',') for label in specific_labels)]
+
+    # Prepare data for the chart
+    labels = list(label_counts.keys())
+    values = list(label_counts.values())
+    hover_info = [', '.join(label_products[label]) for label in labels]  # Create a tooltip with product names
+
+    # Create the pie chart
+    fig = px.pie(
+        names=labels,
+        values=values,
+        title="Product Distribution by Labels",
+        color_discrete_sequence=["#FFF59D", "#A8E6CF", "#81C784", "#E0E0E0"]  # Custom colors: Yellow for No Gluten, Dark Green for Vegetarian, Light Green for Vegan, Grey for Others
+    )
+
+    # Customization
+    fig.update_traces(
+        textposition="inside", 
+        textinfo="percent+label",
+        hovertemplate="%{label}: %{value} products<br>%{customdata[0]}"  # Display product names in the tooltip
+    )
+    fig.update_layout(
+        title_font_size=18,
+        title_font_family="Arial",
+        title_x=0.5,
+        hovermode="closest"  # Display the tooltip on hover
+    )
+
+    # Add custom data for the tooltip
+    fig.update_traces(customdata=hover_info)
+
+    # Display the chart
+    st.plotly_chart(fig)
