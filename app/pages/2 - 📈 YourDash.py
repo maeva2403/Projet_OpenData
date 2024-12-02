@@ -7,8 +7,8 @@ initialize_session_state()
 # Display the cart sidebar
 show_cart_sidebar()
 
-# Dashboard title
-st.title("Your Nutritional Dashboard")
+# Main title of the page
+st.markdown("<h1 class='title'>📈 Your Nutritional Dashboard</h1>", unsafe_allow_html=True)
 
 # Check if any products are selected
 if len(st.session_state.selected_products) < 1:

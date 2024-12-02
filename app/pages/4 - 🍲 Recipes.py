@@ -24,7 +24,7 @@ st.markdown(
         font-family: Arial, sans-serif;
     }
     .subtitle {
-        color: #FF8552;
+        color: #333333;
         font-size: 1.3em;
         text-align: center;
         font-family: Arial, sans-serif;

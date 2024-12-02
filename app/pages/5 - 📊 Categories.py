@@ -14,19 +14,53 @@ from functions import (
 initialize_session_state()
 show_cart_sidebar()
 
+# Page styling with CSS
+st.markdown(
+    """
+    <style>
+    .title {
+        color: #FF6F3C;
+        font-size: 2.5em;
+        font-weight: bold;
+        text-align: center;
+        font-family: Arial, sans-serif;
+    }
+    .subtitle {
+        color: #333333;
+        font-size: 1.3em;
+        text-align: center;
+        font-family: Arial, sans-serif;
+        margin-bottom: 20px;
+    }
+    .input-label {
+        color: #FF6F3C;
+        font-size: 1.2em;
+        font-weight: bold;
+        font-family: Arial, sans-serif;
+        margin-bottom: 10px;
+    }
+    </style>
+    """, unsafe_allow_html=True
+)
+
 # Title of the page
-st.title("Category Visualization")
+st.markdown("<h1 class='title'>📊 Category Visualization</h1>", unsafe_allow_html=True)
+st.markdown("<p class='subtitle'>Explore trends and visualize product data by category</p>", unsafe_allow_html=True)
 
 # List of available categories
 categories = ["Snacks", "Cereals and Potatoes", "Fruits", "Vegetables", "Dairy", "Beverages", "Waters"]
-# User selects a category from the dropdown
-selected_category = st.selectbox("Select a category", categories)
 
-# Input for the number of items to display
-nb_items = st.number_input("Number of products to display", min_value=10, max_value=100, value=20, step=5)
+# Dropdown for category selection
+st.markdown("<label class='input-label'>Select a category</label>", unsafe_allow_html=True)
+selected_category = st.selectbox("", categories)
+
+# Number input for number of items to display
+st.markdown("<label class='input-label'>Number of products to display</label>", unsafe_allow_html=True)
+nb_items = st.number_input("", min_value=10, max_value=100, value=20, step=5)
 
 if selected_category:
-   st.write(f"Loading products for category: {selected_category}...")
+   st.markdown(f"<p class='subtitle'>Loading products for category: {selected_category}...</p>", unsafe_allow_html=True)
+   
    # Search for products by selected category and number of items
    products = search_product_by_category(selected_category, nb_items)
    
@@ -37,7 +71,7 @@ if selected_category:
        if 'nova_group' in df_processed.columns:
            df_processed['nova_group'] = df_processed['nova_group'].astype(str)
            
-       st.write(f"Processed products for category: {selected_category}")
+       st.markdown(f"<p class='subtitle'>Processed products for category: {selected_category}</p>", unsafe_allow_html=True)
        st.dataframe(df_processed)
 
        # List of columns available for graphing
@@ -47,8 +81,10 @@ if selected_category:
        ]
        # Check which columns are available in the processed dataframe
        available_columns = [col for col in columns_list if col in df_processed.columns]
-       # Let the user select a column for plotting
-       selected_column = st.selectbox("Select a variable for the chart", available_columns)
+       
+       # Dropdown for variable selection
+       st.markdown("<label class='input-label'>Select a variable for the chart</label>", unsafe_allow_html=True)
+       selected_column = st.selectbox("", available_columns)
 
        if selected_column:
            if selected_column in ['nutriscore_grade', 'ecoscore_grade', 'nova_group']:
