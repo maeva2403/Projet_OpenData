@@ -8,7 +8,7 @@ initialize_session_state()
 show_cart_sidebar()
 
 # Dashboard title
-st.title("Nutritional Dashboard")
+st.title("Your Nutritional Dashboard")
 
 # Check if any products are selected
 if len(st.session_state.selected_products) < 1:

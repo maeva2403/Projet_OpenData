@@ -32,7 +32,7 @@ def initialize_session_state():
 def show_cart_sidebar():
    with st.sidebar:
        # Display the sidebar subheader for the cart
-       st.subheader("Panier", anchor="cart-subheader")
+       st.subheader("Cart", anchor="cart-subheader")
 
        # Check if there are products in the selected_products list
        if st.session_state.selected_products:
@@ -156,52 +156,80 @@ def clean_prefixes(items):
     
     return formatted_items
 
-# Function to display the map of sales countries with cleaned prefixes
-def display_sales_map(countries):
-    if countries:
-        # Clean the countries (remove prefixes and capitalize correctly)
-        countries_cleaned = clean_prefixes(countries)
-        
-        # Create a DataFrame with the cleaned countries
-        df_countries = pd.DataFrame(countries_cleaned, columns=['Country'])
-        
-        # Use Plotly to display a choropleth map of the selected countries
-        fig = px.choropleth(df_countries,
-                            locations='Country', 
-                            locationmode='country names',
-                            color='Country',
-                            hover_name='Country',
-                            title="Countries of Sale for Selected Products",
-                            template="plotly_white",  # White background
-                            color_continuous_scale='Viridis')  # Modern, colorful color palette
-        
-        # Display the map in Streamlit with a maximum width
-        st.plotly_chart(fig, use_container_width=True)
-
-# Example usage with a list of products
-def display_sales_info_and_map(selected_products):
-    countries_list = []  # List to store sales countries
+def display_sales_map(countries_data):
+    if not countries_data:
+        return
     
-    # Retrieve the sales countries
-    countries = []
-    for product in selected_products:
+    # Créer un dictionnaire pays -> produits
+    country_products = {}
+    for product in countries_data:
         product_name = product.get('product_name', 'Unknown')
-        product_countries = product.get('countries_tags', [])
+        countries = product.get('countries_tags', [])
         
-        if product_countries:
-            countries_cleaned = clean_prefixes(product_countries)
-            countries_list.append({'Product': product_name, 'Countries of Sale': ', '.join(countries_cleaned)})
-            countries.extend(countries_cleaned)  # Add all countries to the sales countries list
-        else:
-            countries_list.append({'Product': product_name, 'Countries of Sale': 'No information available'})
+        cleaned_countries = clean_prefixes(countries)
+        for country in cleaned_countries:
+            if country not in country_products:
+                country_products[country] = []
+            country_products[country].append(product_name)
     
-    # Create a DataFrame for the sales countries table
+    # Créer le DataFrame pour Plotly
+    df_countries = pd.DataFrame([
+        {'Country': country, 'Products': '<br>- '.join(products)}
+        for country, products in country_products.items()
+    ])
+    
+    # Créer la carte avec les infobulles personnalisées
+    fig = px.choropleth(
+        df_countries,
+        locations='Country',
+        locationmode='country names',
+        color='Country',
+        hover_data=['Products'],
+        custom_data=['Products'],
+        title="Sales Countries for Selected Products",
+        template="plotly_white",
+        color_continuous_scale='Viridis'
+    )
+
+    fig.update_layout(
+        title_font_size=18,
+        title_font_family="Arial",
+        title_x=0
+    )
+    
+    # Personnaliser le format des infobulles
+    fig.update_traces(
+        hovertemplate="<b>%{location}</b><br><br>" +
+        "Products sold:<br>- %{customdata[0]}<extra></extra>"
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+
+def display_sales_info_and_map(selected_products):
+    # Afficher le tableau des pays
+    countries_list = []
+    for product in selected_products:
+        product_name = product.get('product_name', 'Inconnu')
+        countries = product.get('countries_tags', [])
+        
+        if countries:
+            countries_cleaned = clean_prefixes(countries)
+            countries_list.append({
+                'Product': product_name, 
+                'Countries of Sale': ', '.join(countries_cleaned)
+            })
+        else:
+            countries_list.append({
+                'Product': product_name, 
+                'Countries of Sale': 'No information available'
+            })
+
     df_countries = pd.DataFrame(countries_list)
-    st.subheader("Countries of Sale for Selected Products")
+    st.subheader("Sales Countries Table for Products")
     st.dataframe(df_countries)
     
-    # Display the sales map
-    display_sales_map(countries)
+    # Afficher la carte avec les produits au survol
+    display_sales_map(selected_products)
 
 # Function to display the sales countries table
 def display_sales_countries_table(selected_products):
@@ -266,7 +294,7 @@ def plot_nutrient_rda_comparison_plotly(selected_products, goals):
    fig.update_layout(
        title_font_size=18,
        title_font_family="Arial",
-       title_x=0.5,
+       title_x=0,
        xaxis_title_font_size=14,
        yaxis_title_font_size=14,
        xaxis_tickangle=-45,
@@ -313,7 +341,7 @@ def plot_nutrient_distribution_plotly(selected_products):
    fig.update_layout(
        title_font_size=18,
        title_font_family="Arial",
-       title_x=0.5,
+       title_x=0,
        xaxis_title_font_size=14,
        yaxis_title_font_size=14,
        xaxis_tickangle=-45,
@@ -523,56 +551,59 @@ def process_products(products):
 
 
 def plot_label_distribution(selected_products):
-    # Specific labels to search for
     specific_labels = ["No gluten", "Vegetarian", "Vegan"]
     label_counts = {label: 0 for label in specific_labels}
-    label_products = {label: [] for label in specific_labels}  # Dictionary to store products associated with each label
+    label_products = {label: [] for label in specific_labels}
 
-    # Iterate over selected products
     for product in selected_products:
-        labels = product.get('labels', '')
-        if labels:
-            labels_list = labels.split(',')
-            for label in specific_labels:
-                if label in labels_list:
-                    label_counts[label] += 1
-                    label_products[label].append(product.get('product_name', 'Unknown'))
+        labels = product.get('labels', '').split(',')
+        for label in specific_labels:
+            if label in labels:
+                label_counts[label] += 1
+                label_products[label].append(product.get('product_name', 'Unknown'))
 
-    # Add an "Others" category if necessary
     total_products = len(selected_products)
     others_count = total_products - sum(label_counts.values())
     if others_count > 0:
         label_counts["Others"] = others_count
-        label_products["Others"] = [product.get('product_name', 'Unknown') for product in selected_products if not any(label in product.get('labels', '').split(',') for label in specific_labels)]
+        label_products["Others"] = [p.get('product_name', 'Unknown') for p in selected_products 
+                                  if not any(label in p.get('labels', '').split(',') for label in specific_labels)]
 
-    # Prepare data for the chart
     labels = list(label_counts.keys())
     values = list(label_counts.values())
-    hover_info = [', '.join(label_products[label]) for label in labels]  # Create a tooltip with product names
+    hover_info = [f"<b>{label}</b><br><br>{count} product/s:<br>- " + "<br>- ".join(label_products[label]) 
+                 for label, count in zip(labels, values)]
 
-    # Create the pie chart
+    # Réorganiser les couleurs pour correspondre à l'ordre des labels
+    colors = {
+        "No gluten": "#FFF59D",    # jaune pâle
+        "Vegetarian": "#A8E6CF",   # bleu
+        "Vegan": "#81C784",        # vert
+        "Others": "#E0E0E0"        # gris
+    }
+    color_sequence = [colors[label] for label in labels]
+
     fig = px.pie(
         names=labels,
         values=values,
-        title="Product Distribution by Labels",
-        color_discrete_sequence=["#FFF59D", "#A8E6CF", "#81C784", "#E0E0E0"]  # Custom colors: Yellow for No Gluten, Dark Green for Vegetarian, Light Green for Vegan, Grey for Others
+        title="Product Distribution by Dietary Requirements",
+        color_discrete_sequence=color_sequence
     )
 
-    # Customization
     fig.update_traces(
         textposition="inside", 
         textinfo="percent+label",
-        hovertemplate="%{label}: %{value} products<br>%{customdata[0]}"  # Display product names in the tooltip
+        hovertemplate="%{customdata}<extra></extra>",
+        customdata=hover_info
     )
+    
     fig.update_layout(
         title_font_size=18,
         title_font_family="Arial",
-        title_x=0.5,
-        hovermode="closest"  # Display the tooltip on hover
+        title_x=0,
+        hovermode="closest",
+        showlegend=True,
+        legend_title="Dietary Restrictions"
     )
 
-    # Add custom data for the tooltip
-    fig.update_traces(customdata=hover_info)
-
-    # Display the chart
     st.plotly_chart(fig)

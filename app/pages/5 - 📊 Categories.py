@@ -15,7 +15,7 @@ initialize_session_state()
 show_cart_sidebar()
 
 # Title of the page
-st.title("OpenFoodFacts Data Visualization")
+st.title("Category Visualization")
 
 # List of available categories
 categories = ["Snacks", "Beverages", "Dairy", "Fruits", "Vegetables"]
