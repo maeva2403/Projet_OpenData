@@ -20,43 +20,31 @@ def fetch_data(category):
         "nova_group", "nutrition_data_per", "allergens", "traces", "labels"
     ]
 
-    while len(products) < 30 and page <= 5:  # Limite à 30 produits ou 5 pages
-        try:
-            response = requests.get(f"{url}?page={page}", headers=headers, timeout=10)  # Timeout de 10 secondes
-            
-            if response.status_code == 200:
-                data = response.json()
-                new_products = data.get('products', [])
-                if not new_products:  # Si aucun nouveau produit n'est trouvé, sortir de la boucle
-                    break
-                
-                for product in new_products:
-                    if all(product.get(key) not in [None, ''] for key in required_keys):
-                        products.append(product)
-                        if len(products) >= 30:
-                            break
-                
-                page += 1
-            
-            elif response.status_code == 429:
-                st.warning("Limite de requêtes atteinte. Attente avant de réessayer...")
-                time.sleep(10)  # Pause de 10 secondes
-            elif response.status_code == 504:
-                st.warning("Erreur 504 : Timeout du serveur. Réessai dans quelques secondes...")
-                time.sleep(5)  # Réessayer après 5 secondes
-            else:
-                st.error(f"Erreur lors de la récupération des produits : {response.status_code}")
+    while len(products) < 20:  # Continue jusqu'à obtenir 50 produits valides
+        response = requests.get(f"{url}?page={page}", headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json()
+            new_products = data.get('products', [])
+            if not new_products:  # Si aucun nouveau produit n'est trouvé, sortir de la boucle
                 break
-
-        except requests.exceptions.Timeout:
-            st.warning("Le délai d'attente pour la requête a été dépassé. Nouvelle tentative...")
-            time.sleep(5)  # Réessayer après 5 secondes
-        except requests.exceptions.RequestException as e:
-            st.error(f"Une erreur réseau s'est produite : {e}")
+            
+            for product in new_products:
+                if all(product.get(key) not in [None, ''] for key in required_keys):
+                    products.append(product)
+                    if len(products) >= 50:
+                        break
+            
+            page += 1
+        
+        elif response.status_code == 429:
+            st.warning("Limite de requêtes atteinte. Attente avant de réessayer...")
+            time.sleep(10)
+        else:
+            st.error(f"Erreur lors de la récupération des produits : {response.status_code}")
             break
 
-    return products[:30]
-
+    return products[:50]
 
 # Fonction de nettoyage des préfixes
 def clean_prefixes(items):
