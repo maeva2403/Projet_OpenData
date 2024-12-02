@@ -4,20 +4,22 @@ import streamlit as st
 
 from functions import initialize_session_state, show_cart_sidebar # etc...
 
+# Initialize session state and display the cart sidebar
 initialize_session_state()
 show_cart_sidebar()
 
-# Reste du code spécifique à la page
-
+# Page title
 st.title("📊 Food Analysis Dashboard")
 
 # Introduction
 st.markdown("""
-Explorez et analysez les produits alimentaires à travers différentes fonctionnalités:
-- **🛒 Products**: Recherchez des produits par nom ou catégorie
-- **📈 YourDash**:Suivez vos objectifs nutritionnels et analysez la répartition géographique
-- **🆚 Compare**: Comparez jusqu'à 5 produits côte à côte
-- **🍲 Recipes**: Trouvez des recettes à partir d'ingrédients
-- **📊 Categories**: Analysez les tendances par catégorie
-- **🌐 Global**: Vue d'ensemble des données mondiales
+Explore and analyze food products through various features:
+- **🛒 Products**: Search for products by name or category
+- **📈 YourDash**: Track your nutritional goals and analyze geographical distribution
+- **🆚 Compare**: Compare up to 5 products side by side
+- **🍲 Recipes**: Find recipes based on ingredients
+- **📊 Categories**: Analyze trends by category
 """)
+
+# Footer with project attribution in italics
+st.markdown("<br><br><i>In the context of the Open Data project: Brice Grivet, Maéva Maïo, Houria Sayah.</i>", unsafe_allow_html=True)
