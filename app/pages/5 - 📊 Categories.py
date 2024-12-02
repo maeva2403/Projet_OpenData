@@ -18,7 +18,7 @@ show_cart_sidebar()
 st.title("Category Visualization")
 
 # List of available categories
-categories = ["Snacks", "Beverages", "Dairy", "Fruits", "Vegetables"]
+categories = ["Snacks", "Cereals and Potatoes", "Fruits", "Vegetables", "Dairy", "Beverages", "Waters"]
 # User selects a category from the dropdown
 selected_category = st.selectbox("Select a category", categories)
 

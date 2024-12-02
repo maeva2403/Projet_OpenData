@@ -23,7 +23,7 @@ if st.session_state.selected_products:
     
     # User input for daily goals for nutrients
     with col1:
-        calories = st.number_input("Calories (kcal)", 0, 5000, st.session_state.objectifs["calories"], 50)
+        calories = st.number_input("Energy (kcal)", 0, 5000, st.session_state.objectifs["calories"], 50)
         fat = st.number_input("Fat (g)", 0, 200, st.session_state.objectifs["graisses"])
     with col2:
         saturated_fat = st.number_input("Saturated Fat (g)", 0, 100, st.session_state.objectifs.get("graisses_sat", 20))
@@ -35,15 +35,16 @@ if st.session_state.selected_products:
         salt = st.number_input("Salt (g)", 0.0, 20.0, float(st.session_state.objectifs["sel"]), 0.1)
 
     # Update the session state with the new values
-    st.session_state.objectifs.update({
-        "Calories": calories,
-        "Fat": fat,
-        "Saturated_fat": saturated_fat,
-        "Carbohydrates": carbohydrates, 
-        "Sugars": sugars,
-        "Proteins": proteins,
-        "Salt": salt
-    })
+    if st.button("Apply Changes"):
+        st.session_state.objectifs.update({
+            "calories": calories,
+            "fat": fat,
+            "saturated_fat": saturated_fat,
+            "carbohydrates": carbohydrates, 
+            "sugars": sugars,
+            "proteins": proteins,
+            "salt": salt
+        })
 
     # Plot comparisons between nutrient values and daily recommended intake (RDA)
     plot_nutrient_rda_comparison_plotly(st.session_state.selected_products, st.session_state.objectifs)

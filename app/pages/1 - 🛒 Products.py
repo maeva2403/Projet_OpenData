@@ -23,7 +23,7 @@ if search_mode == "By name":
 
 # If the user selects "By category" mode
 else:
-    category = st.selectbox("Category", ["Beverages", "Snacks", "Pastas", "Fruits", "Cereals and Potatoes", "Vegetables", "Water"])
+    category = st.selectbox("Category", ["Snacks", "Cereals and Potatoes", "Fruits", "Vegetables", "Dairy", "Beverages", "Waters"])
     if st.button("Search", key="search_by_category"):
         st.session_state.search_results = search_product_by_category(category)
 

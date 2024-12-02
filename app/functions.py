@@ -3,7 +3,6 @@
 import requests
 import plotly.express as px
 import pandas as pd
-import time
 import streamlit as st
 import plotly.graph_objects as go
 import re
@@ -339,18 +338,19 @@ def plot_nutrient_distribution_plotly(selected_products):
                 color_discrete_sequence=["#4CAF50", "#FFC107", "#F44336", "#2196F3", "#9C27B0", "#FF9800", "#03A9F4"])
 
    fig.update_layout(
-       title_font_size=18,
-       title_font_family="Arial",
-       title_x=0,
-       xaxis_title_font_size=14,
-       yaxis_title_font_size=14,
-       xaxis_tickangle=-45,
-       xaxis_title="Nutrients",
-       yaxis_title="Quantity (in kcal or g)",
-       template="plotly_white",
-       xaxis=dict(showgrid=True, zeroline=False),
-       yaxis=dict(showgrid=True, zeroline=False),
-       title=dict(font=dict(color="#4CAF50"))
+        title_font_size=18,
+        title_font_family="Arial",
+        title_x=0,
+        xaxis_title_font_size=14,
+        yaxis_title_font_size=14,
+        xaxis_tickangle=-45,
+        xaxis_title="Nutrients",
+        yaxis_title="Quantity (in kcal or g)",
+        template="plotly_white",
+        xaxis=dict(showgrid=True, zeroline=False),
+        yaxis=dict(showgrid=True, zeroline=False),
+        showlegend=True,
+        legend_title="Nutrients"
    )
 
    st.plotly_chart(fig)
@@ -603,7 +603,7 @@ def plot_label_distribution(selected_products):
         title_x=0,
         hovermode="closest",
         showlegend=True,
-        legend_title="Dietary Restrictions"
+        legend_title="Dietary Requirments"
     )
 
     st.plotly_chart(fig)
