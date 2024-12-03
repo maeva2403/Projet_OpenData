@@ -132,5 +132,5 @@ if selected_category:
            fig.update_layout(xaxis_tickangle=-45, showlegend=False)
            # Display the plot
            st.plotly_chart(fig)
-   else:
-       st.warning(f"No products found for category: {selected_category}.")
+   #else:
+       #st.warning(f"No products found for category: {selected_category}.")
